@@ -20,6 +20,11 @@ Agent's machine (no GPU)          Modal (H100, ~5 min)
 8. Agent reads results
 ```
 
+## Validation (can you trust this?)
+- uv run train.py on a Mac (no GPU) → dispatches to Modal H100
+- Run the original karpathy train.py directly on a GPU
+- These two setups produce the same output format, the same exit codes, and the same results (within GPU variance)
+
 ## Setup
 
 ```bash
