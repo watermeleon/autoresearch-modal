@@ -1,13 +1,17 @@
 [project]
 name = "autoresearch"
 version = "0.1.0"
-description = "Autonomous pretraining research swarm"
+description = "Autonomous pretraining research swarm (Modal GPU dispatch)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "modal>=1.0.0",
+]
+
+[project.optional-dependencies]
+gpu = [
     "kernels>=0.11.7",
     "matplotlib>=3.10.8",
-    "modal>=1.0.0",
     "numpy>=2.2.6",
     "pandas>=2.3.3",
     "pyarrow>=21.0.0",

@@ -2,8 +2,8 @@
 Modal app for autoresearch. Defines GPU functions for training and data prep.
 
 Usage:
-    uv run modal_app.py prepare              # one-time: populate Volume with data + tokenizer
-    uv run modal_app.py prepare --num-shards 20  # download more shards
+    modal run modal_app.py --command prepare              # one-time: populate Volume with data + tokenizer
+    modal run modal_app.py --command prepare --num-shards 20  # download more shards
 """
 
 import modal
@@ -14,20 +14,18 @@ app = modal.App("autoresearch")
 data_volume = modal.Volume.from_name("autoresearch-data", create_if_missing=True)
 DATA_MOUNT = "/root/.cache/autoresearch"
 
-# Image with all dependencies
+# Image with all dependencies (single layer for faster caching)
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
         "torch==2.9.1",
-        extra_index_url="https://download.pytorch.org/whl/cu128",
-    )
-    .pip_install(
         "kernels>=0.11.7",
         "numpy>=2.2.6",
         "pyarrow>=21.0.0",
         "requests>=2.32.0",
         "rustbpe>=0.1.0",
         "tiktoken>=0.11.0",
+        extra_index_url="https://download.pytorch.org/whl/cu128",
     )
 )
 
@@ -44,6 +42,9 @@ def run_training(train_py: str, prepare_py: str) -> dict:
     import subprocess
     import tempfile
 
+    # Ensure we see the latest data on the Volume
+    data_volume.reload()
+
     workspace = tempfile.mkdtemp()
     train_path = os.path.join(workspace, "train.py")
     prepare_path = os.path.join(workspace, "prepare.py")
@@ -56,14 +57,21 @@ def run_training(train_py: str, prepare_py: str) -> dict:
     env = os.environ.copy()
     env["MODAL_IS_REMOTE"] = "1"
 
-    result = subprocess.run(
-        ["python", train_path],
-        cwd=workspace,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=540,  # 9 min hard kill (training budget is 5 min + startup)
-    )
+    try:
+        result = subprocess.run(
+            ["python", train_path],
+            cwd=workspace,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=540,  # 9 min hard kill (training budget is 5 min + startup)
+        )
+    except subprocess.TimeoutExpired as e:
+        return {
+            "stdout": e.stdout or "",
+            "stderr": (e.stderr or "") + "\nTIMEOUT: training exceeded 540s\n",
+            "exit_code": 1,
+        }
 
     return {
         "stdout": result.stdout,
@@ -89,15 +97,19 @@ def prepare_data_with_content(prepare_py: str, num_shards: int = 10):
     with open(prepare_path, "w") as f:
         f.write(prepare_py)
 
-    result = subprocess.run(
-        ["python", prepare_path, "--num-shards", str(num_shards)],
-        cwd=workspace,
-        text=True,
-        timeout=3500,
-    )
+    try:
+        result = subprocess.run(
+            ["python", prepare_path, "--num-shards", str(num_shards)],
+            cwd=workspace,
+            capture_output=True,
+            text=True,
+            timeout=3500,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"prepare.py timed out after 3500s\nstdout: {e.stdout}\nstderr: {e.stderr}")
 
     if result.returncode != 0:
-        raise RuntimeError(f"prepare.py failed with exit code {result.returncode}")
+        raise RuntimeError(f"prepare.py failed (exit {result.returncode}):\n{result.stderr}")
 
     # Commit Volume so data persists
     data_volume.commit()
@@ -106,7 +118,7 @@ def prepare_data_with_content(prepare_py: str, num_shards: int = 10):
 
 @app.local_entrypoint()
 def main(command: str = "prepare", num_shards: int = 10):
-    """CLI entrypoint: uv run modal_app.py [prepare|train]"""
+    """CLI entrypoint: modal run modal_app.py [--command prepare] [--num-shards 10]"""
     import os
 
     if command == "prepare":

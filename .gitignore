@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+run.log
+results.tsv
+validate_dispatch.log
+validate_direct.log

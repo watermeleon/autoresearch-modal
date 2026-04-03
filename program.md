@@ -27,7 +27,8 @@ Each experiment runs on a single GPU. The training script runs for a **fixed tim
 
 **What you CANNOT do:**
 - Modify `prepare.py`. It is read-only. It contains the fixed evaluation, data loading, tokenizer, and training constants (time budget, sequence length, etc).
-- Modify the Modal dispatch block at the top of `train.py` (the lines between `=== MODAL DISPATCH ===` and `=== END MODAL DISPATCH ===`). This handles remote GPU execution and must remain intact.
+- Modify the Modal dispatch block at the top of `train.py` (the lines between `=== MODAL DISPATCH ===` and `=== END MODAL DISPATCH ===`). This handles remote GPU execution and must remain intact. Even if you rewrite train.py from scratch, you must preserve these lines verbatim at the top.
+- Modify `modal_dispatch.py` or `modal_app.py`. These handle remote GPU execution and are off-limits.
 - Install new packages or add dependencies. You can only use what's already in `pyproject.toml`.
 - Modify the evaluation harness. The `evaluate_bpb` function in `prepare.py` is the ground truth metric.
 
