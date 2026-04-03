@@ -9,7 +9,7 @@ import sys
 
 def run_on_modal(train_py_path: str) -> int:
     """Read train.py + prepare.py, dispatch to Modal, print output, return exit code."""
-    from modal_app import run_training
+    from modal_app import app, run_training
 
     # Read current file contents
     base_dir = os.path.dirname(os.path.abspath(train_py_path))
@@ -21,8 +21,9 @@ def run_on_modal(train_py_path: str) -> int:
     with open(prepare_path) as f:
         prepare_py = f.read()
 
-    # Dispatch to Modal
-    result = run_training.remote(train_py, prepare_py)
+    # Start the Modal app and dispatch
+    with app.run():
+        result = run_training.remote(train_py, prepare_py)
 
     # Print output exactly as if it ran locally
     if result["stdout"]:

@@ -96,7 +96,7 @@ def run_modal_dispatch() -> tuple[str, int]:
 
 def run_direct_on_modal() -> tuple[str, int]:
     """Run the original train.py directly on Modal (no preamble) as a baseline."""
-    from modal_app import run_training
+    from modal_app import app, run_training
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -123,7 +123,8 @@ def run_direct_on_modal() -> tuple[str, int]:
         prepare_py = f.read()
 
     print("\nRunning: Direct on Modal (baseline, no preamble) ...")
-    result = run_training.remote(train_py_clean, prepare_py)
+    with app.run():
+        result = run_training.remote(train_py_clean, prepare_py)
     return result["stdout"] + result["stderr"], result["exit_code"]
 
 
