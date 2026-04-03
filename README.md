@@ -1,12 +1,12 @@
 # autoresearch-modal
 
-Fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) that runs training on [Modal](https://modal.com) GPUs instead of requiring a local GPU.
+Fork of [karpathy/autoresearch](https://github.com/karpathy/autoresearch) that runs training on [Modal](https://modal.com) GPUs. In the original repo, GPU time burns while the agent thinks or codes. Here, Modal allows us to only pay for GPU time when training is happening.
 
-The agent runs on any machine (laptop, CPU server, etc.) and edits `train.py` as usual. When it runs `uv run train.py`, the training is transparently dispatched to a Modal H100 and the output is streamed back. The agent doesn't know Modal exists.
+The agent runs on any machine (laptop, CPU server, etc.) and edits `train.py` as usual. When it runs `uv run train.py`, the training is transparently dispatched to a Modal H100 and the output is streamed back. The agent doesn't need to know Modal exists.
 
 ## How it works
 
-A small preamble at the top of `train.py` detects that there's no local GPU and calls `modal_dispatch.py`, which sends the current `train.py` + `prepare.py` to a Modal GPU function. The Modal container runs training, and stdout/stderr are returned to the local machine exactly as if training ran locally.
+A small preamble at the top of `train.py` checks whether it's running inside Modal; if not, it dispatches the run to a Modal GPU via `modal_dispatch.py`, which sends the current `train.py` + `prepare.py` to a Modal GPU function. The Modal container runs training, and stdout/stderr are returned to the local machine exactly as if training ran locally.
 
 ```
 Agent's machine (no GPU)          Modal (H100, ~5 min)
