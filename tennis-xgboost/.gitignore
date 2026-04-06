@@ -1,0 +1,15 @@
+data/raw/
+data/processed/*.parquet
+models/**/*.joblib
+__pycache__/
+*.pyc
+.venv/
+workbench/branch-*
+.ruff_cache/
+*.log
+scripts/generate_publication_plots.py
+.env
+.DS_Store
+*.egg-info/
+dist/
+tmp/

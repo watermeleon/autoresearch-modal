@@ -42,7 +42,7 @@ from results import _make_run_id, save_results
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 TENNIS_REPO_DIR = os.environ.get(
     "TENNIS_REPO_PATH",
-    os.path.join(_THIS_DIR, "..", "tennis-xgboost-autoresearch"),
+    os.path.join(_THIS_DIR, "tennis-xgboost"),
 )
 
 # ---------------------------------------------------------------------------
@@ -84,7 +84,7 @@ image = (
     )
     # uv for fast pip installs
     .run_commands("curl -LsSf https://astral.sh/uv/install.sh | sh")
-    # Copy tennis-xgboost repo into image (excluding .git)
+    # Copy bundled tennis-xgboost code into image
     .add_local_dir(
         TENNIS_REPO_DIR,
         remote_path="/repo/tennis-xgboost",
@@ -92,7 +92,7 @@ image = (
     )
     # Create venv + install tennis deps (gate.sh requires .venv)
     .run_commands(
-        "cd /repo/tennis-xgboost && /root/.local/bin/uv venv",
+        "cd /repo/tennis-xgboost && /root/.local/bin/uv venv --clear",
         "cd /repo/tennis-xgboost && /root/.local/bin/uv pip install --python /repo/tennis-xgboost/.venv/bin/python -e '.[dev]'",
     )
     # Sync Sackmann data (cached in image layer)
@@ -122,14 +122,14 @@ results_volume = modal.Volume.from_name("tennis-xgboost-results", create_if_miss
 # ---------------------------------------------------------------------------
 
 @app.function(
-    cpu=2,
-    memory=8192,
+    cpu=8,
+    memory=16384,
     timeout=12 * 3600,  # 12h max
     volumes={"/results": results_volume},
     secrets=[
-        modal.Secret.from_name("anthropic-api-key"),
+        # modal.Secret.from_name("anthropic-api-key"),
         modal.Secret.from_name("openai-api-key"),
-        modal.Secret.from_name("codex-auth"),
+        # modal.Secret.from_name("codex-auth"),
     ],
 )
 def run_research(
@@ -194,7 +194,7 @@ def run_research(
         cwd=task_dir,
         capture_output=True,
         text=True,
-        timeout=600,
+        timeout=1200,
     )
 
     if baseline_result.returncode != 0:
