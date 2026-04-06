@@ -5,3 +5,6 @@ run.log
 results.tsv
 validate_dispatch.log
 validate_direct.log
+output.log
+error.log
+transcript_*.json
